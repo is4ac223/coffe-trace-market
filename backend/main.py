@@ -8,23 +8,9 @@ from app.api import auth, lotes, productos, pos, subastas, usuarios
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    try:
-        print("🔄 Intentando conectar a la base de datos con Prisma...")
-        await prisma.connect()
-        print("✅ Conexión exitosa a la base de datos.")
-    except Exception as e:
-        print("❌ ERROR CRÍTICO: No se pudo conectar a la base de datos al arrancar.")
-        print(f"Detalle del error: {e}")
-        print("⚠️ El servidor continuará encendido para depuración.")
-
+    await prisma.connect()
     yield
-
-    try:
-        if prisma.is_connected():
-            await prisma.disconnect()
-            print("🛑 Prisma desconectado correctamente.")
-    except Exception as e:
-        print(f"⚠️ Error al intentar desconectar Prisma: {e}")
+    await prisma.disconnect()
 
 app = FastAPI(
     title="API DAppHACommerce / STGC",
