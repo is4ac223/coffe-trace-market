@@ -13,23 +13,19 @@ from prisma import BINARY_PATHS
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("🔄 [Render-Fix] Configurando rutas dinámicas para el motor de Prisma...")
+    print("🔄 [Render-Fix] Buscando motor de Prisma copiado localmente...")
 
-    # 1. Ruta absoluta exacta donde Render descargó los binarios en la caché
-    cache_dir = Path(
-        "/opt/render/.cache/prisma-python/binaries/5.17.0/393aa359c9ad4a4bb28630fb5613f9c281cde053")
-    binary_name = "prisma-query-engine-debian-openssl-3.0.x"
-    expected_binary = cache_dir / binary_name
+    # Ahora buscamos el archivo directamente en la carpeta del backend
+    local_binary = Path("./backend/prisma-query-engine-debian-openssl-3.0.x")
+    # Si usas Root Directory "backend" en Render, prueba cambiar la ruta a Path("./prisma-query-engine-debian-openssl-3.0.x")
 
-    # 2. Forzar a Prisma a mirar esa carpeta antes de conectar
-    if expected_binary.exists():
-        print(f"✅ [Render-Fix] Motor encontrado en: {expected_binary}")
-        BINARY_PATHS.query_engine = expected_binary
-    else:
+    if local_binary.exists():
         print(
-            "⚠️ [Render-Fix] No se detectó el binario en la caché global. Se usará la ruta por defecto.")
+            f"✅ [Render-Fix] Motor local encontrado y activado: {local_binary}")
+        BINARY_PATHS.query_engine = local_binary.resolve()
+    else:
+        print("⚠️ [Render-Fix] No se encontró el binario local en ./backend/.")
 
-    # 3. Intentar conectar protegiendo el flujo con try-except
     try:
         print("🔄 Conectando a la base de datos...")
         await prisma.connect()
@@ -38,15 +34,10 @@ async def lifespan(app: FastAPI):
         print(f"❌ ERROR CRÍTICO AL CONECTAR: {e}")
         print("⚠️ El servidor continuará encendido para evitar caídas de puerto en Render.")
 
-    yield  # Aquí es donde la API se queda corriendo viva
+    yield
 
-    # Desconexión limpia al apagar el servidor
-    try:
-        if prisma.is_connected():
-            await prisma.disconnect()
-            print("🛑 Prisma desconectado correctamente.")
-    except Exception as e:
-        print(f"⚠️ Error al desconectar Prisma: {e}")
+    if prisma.is_connected():
+        await prisma.disconnect()
 
 
 app = FastAPI(
