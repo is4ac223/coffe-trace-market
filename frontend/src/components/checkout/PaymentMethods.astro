@@ -1,0 +1,266 @@
+---
+import './PaymentMethods.css'
+import { Icon } from 'astro-icon/components';
+
+import { 
+    getI18n,
+    resolveLocale,
+    readConsent 
+} from '../../lib/i18n';
+
+const consent = readConsent(Astro.cookies);
+const locale = resolveLocale(Astro.cookies, Astro.url, Astro.request, consent);
+const { m } = getI18n(locale);
+
+interface PaymentMethod {
+    id: string;
+    name: string;
+    description: string;
+    icon: string;
+    fee: string;
+    available: boolean;
+}
+
+interface Props {
+    methods: PaymentMethod[];
+    selectedMethod?: string;
+}
+
+---
+
+<!-- Payment Methods Selection -->
+<div class="payment-methods">
+    <div class="payment-header">
+        <h2>{m.checkout.paymentMethods.title}</h2>
+        <p>{m.checkout.paymentMethods.subtitle}</p>
+    </div>
+
+    <div class="payment-grid">
+        <!-- Method: Card -->
+        <button class="payment-card" id="btn-card" data-method="card">
+            <div class="payment-icon">
+                <Icon name="card-outline" class="icon"/>
+            </div>
+            <div class="payment-info">
+                <h3>{m.checkout.paymentMethods.card}</h3>
+                <p class="payment-description">{m.checkout.paymentMethods.cardDesc}</p>
+            </div>
+        </button>
+
+        <!-- Method: Bank Transfer -->
+        <button class="payment-card" id="btn-bank" data-method="bank">
+            <div class="payment-icon">
+                <Icon name="bank" class="icon"/>
+            </div>
+            <div class="payment-info">
+                <h3>{m.checkout.paymentMethods.bank}</h3>
+                <p class="payment-description">{m.checkout.paymentMethods.bankDesc}</p>
+            </div>
+        </button>
+
+        <!-- Method: Web3 -->
+        <button class="payment-card" id="btn-web3" data-method="web3">
+            <div class="payment-icon">
+                <Icon name="bitcoin" class="icon"/>
+            </div>
+            <div class="payment-info">
+                <h3>{m.checkout.paymentMethods.crypto}</h3>
+                <p class="payment-description">{m.checkout.paymentMethods.cryptoDesc}</p>
+            </div>
+        </button>
+    </div>
+</div>
+
+<!-- Payment Forms Container -->
+<div class="payment-forms-container">
+    <!-- Card Form -->
+    <div class="payment-form" id="form-card">
+        <div class="form-header">
+            <h3>{m.checkout.paymentForms.card.title}</h3>
+        </div>
+
+        <div class="form-grid">
+            <!-- Card Holder Name -->
+            <div class="form-group full-width">
+                <label for="card-holder">{m.checkout.paymentForms.card.cardHolder}</label>
+                <input
+                    id="card-holder"
+                    type="text"
+                    placeholder={m.checkout.paymentForms.card.cardHolderPlaceholder}
+                    class="form-input"
+                />
+            </div>
+
+            <!-- Card Number -->
+            <div class="form-group full-width">
+                <label for="card-number">{m.checkout.paymentForms.card.cardNumber}</label>
+                <div class="input-with-icon">
+                    <input
+                        id="card-number"
+                        type="text"
+                        placeholder="0000 0000 0000 0000"
+                        class="form-input"
+                        maxlength="19"
+                    />
+                    <span class="input-icon">
+                        <Icon name="card-outline" class="icon"/>
+                    </span>
+                </div>
+            </div>
+
+            <!-- Expiration & CVC -->
+            <div class="form-group">
+                <label for="card-expiry">{m.checkout.paymentForms.card.cardExpiry}</label>
+                <input
+                    id="card-expiry"
+                    type="text"
+                    placeholder="MM / AA"
+                    class="form-input"
+                    maxlength="5"
+                />
+            </div>
+
+            <div class="form-group">
+                <label for="card-cvc">{m.checkout.paymentForms.card.cardCvc}</label>
+                <input
+                    id="card-cvc"
+                    type="password"
+                    placeholder="***"
+                    class="form-input"
+                    maxlength="4"
+                />
+            </div>
+        </div>
+
+        <!-- Save Card Checkbox -->
+        <div class="form-checkbox">
+            <input
+                id="save-card"
+                type="checkbox"
+                class="checkbox-input"
+            />
+            <label for="save-card">{m.checkout.paymentForms.card.saveCard}</label>
+        </div>
+    </div>
+
+    <!-- Bank Transfer Form -->
+    <div class="payment-form hidden" id="form-bank">
+        <div class="form-header">
+            <h3>{m.checkout.paymentForms.bank.bankFormSubtitle}</h3>
+        </div>
+
+        <div class="bank-info">
+            <div class="bank-row">
+                <span class="bank-label">{m.checkout.paymentForms.bank.label}</span>
+                <span class="bank-value">Origin Bank International</span>
+            </div>
+            <div class="bank-row">
+                <span class="bank-label">{m.checkout.paymentForms.bank.account}</span>
+                <span class="bank-value">ES91 2100 0451 9002 0012 3456</span>
+            </div>
+            <div class="bank-row">
+                <span class="bank-label">{m.checkout.paymentForms.bank.reference}</span>
+                <span class="bank-value bank-reference">#ORD-99201-OT</span>
+            </div>
+        </div>
+
+        <div class="bank-note">
+            <p><strong>{m.checkout.paymentForms.bank.note}</strong>{m.checkout.paymentForms.bank.noteInfo}</p>
+        </div>
+    </div>
+
+    <!-- Web3 Form -->
+    <div class="payment-form hidden" id="form-web3">
+        <div class="web3-container">
+            <div class="web3-qr">
+                <span class="web3-icon">qr_code_2</span>
+            </div>
+            <h3 class="web3-title">{m.checkout.paymentForms.web3.title}</h3>
+            <p class="web3-description">
+                {m.checkout.paymentForms.web3.description}
+            </p>
+            <button class="web3-button">
+                <span class="web3-button-icon">
+                    <Icon name="wallet" class="icon"/>
+                </span>
+                {m.checkout.buttons.connectWallet}
+            </button>
+        </div>
+    </div>
+
+	<!-- Payment Confirmation -->
+	<div class="payment-footer">
+		<div class="payment-security">
+			<span class="security-icon">
+                <Icon name="verified-user" class="icon"/>
+            </span>
+			<span class="security-text">{m.checkout.security}</span>
+		</div>
+		<button class="payment-confirm-btn">
+			{m.checkout.buttons.confirmPay}
+		</button>
+	</div>
+</div>
+
+<script>
+	document.addEventListener('DOMContentLoaded', () => {
+		selectPaymentMethod('card');
+	});
+
+    // Payment method selection
+    document.querySelectorAll('[data-method]').forEach((btn) => {
+        const button = btn as HTMLElement;
+        button.addEventListener('click', () => {
+            const method = button.getAttribute('data-method');
+            selectPaymentMethod(method || '');
+        });
+    });
+
+    function selectPaymentMethod(method: string) {
+        // Hide all forms
+        document.querySelectorAll('.payment-form').forEach((form) => {
+            form.classList.remove('active');
+        });
+
+        // Show selected form
+        const form = document.getElementById(`form-${method}`);
+        if (form) {
+            form.classList.add('active');
+        }
+
+        // Update button states
+        document.querySelectorAll('[data-method]').forEach((btn) => {
+            const button = btn as HTMLElement;
+            const isSelected = button.getAttribute('data-method') === method;
+            if (isSelected) {
+                button.classList.add('selected');
+            } else {
+                button.classList.remove('selected');
+            }
+        });
+    }
+
+    // Format card number
+    const cardNumberInput = document.getElementById('card-number') as HTMLInputElement;
+    if (cardNumberInput) {
+        cardNumberInput.addEventListener('input', (e) => {
+            const target = e.target as HTMLInputElement;
+            let value = target.value.replace(/\s/g, '');
+            let formatted = value.match(/.{1,4}/g)?.join(' ') || value;
+            target.value = formatted;
+        });
+    }
+
+    // Format expiry (MM/AA)
+    const expiryInput = document.getElementById('card-expiry') as HTMLInputElement;
+    if (expiryInput) {
+        expiryInput.addEventListener('input', (e) => {
+            const target = e.target as HTMLInputElement;
+            let value = target.value.replace(/\D/g, '');
+            if (value.length >= 2) {
+                value = value.slice(0, 2) + ' / ' + value.slice(2, 4);
+            }
+            target.value = value;
+        });
+    }
+</script>

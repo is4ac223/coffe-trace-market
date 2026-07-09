@@ -1,0 +1,228 @@
+---
+import { Icon } from 'astro-icon/components';
+import '../../styles/globals.css';
+import './login.css';
+
+import { 
+    getI18n,
+    resolveLocale,
+    readConsent 
+} from '../../lib/i18n';
+
+const consent = readConsent(Astro.cookies);
+const locale = resolveLocale(Astro.cookies, Astro.url, Astro.request, consent);
+const { m, em } = getI18n(locale);
+
+---
+<div class="auth-page">
+    <div class="back">
+        <a href="/" class="back-to-top" aria-label="Volver al inicio">
+            <Icon name="times" class="icon"/>
+        </a>
+    </div>
+    <div class="auth-header">
+        <Icon name="coffee" class="icon"/>
+        <span>CoffeeTrace Market</span>
+    </div>
+    <h1>{m.login.welcome}</h1>
+    <div
+        id="login-copy"
+        hidden
+        data-invalid-credentials={em.login.invalidCredentials}
+        data-not-login={em.login.notLogin}
+        data-required-email="Ingresa tu correo electrónico."
+        data-invalid-email="Ingresa un correo electrónico válido."
+        data-required-password="Ingresa tu contraseña."
+    ></div>
+    <form class="auth-form" novalidate>
+        <div class="error" id="auth-error-box" hidden role="alert" aria-live="polite">
+            <Icon name="error" class="icon-error" />
+            <p class="auth-error" id="auth-error" aria-live="polite"></p>
+        </div>
+        <div class="form-group">
+            <div class="input-with-icon">
+                <label for="email">
+                    {m.login.email}
+                </label>
+                <input 
+                    id="email" 
+                    type="email"
+                    placeholder={m.login.email} 
+                    required 
+                    class="form-input"
+                    autocomplete="email"
+                    aria-describedby="auth-error"
+                />
+                <span class="input-icon">
+                    <Icon name="email" class="icon"/> 
+                </span>
+            </div>
+        </div>
+        <div class="form-group">
+            <div class="input-with-icon">
+                <label for="password">{m.login.password}</label>
+                <input 
+                    id="password" 
+                    type="password"
+                    placeholder={m.login.password}  
+                    required 
+                    class="form-input"
+                    autocomplete="current-password"
+                    aria-describedby="auth-error"
+                />
+                <button
+                    type="button"
+                    class="input-icon toggle-password"
+                    id="btn-eye"
+                    aria-label="Show password"
+                    aria-pressed="false"
+                    style="z-index: 2;"
+                >
+                    <span id="icon-eye">
+                        <Icon name="eye" class="icon" />
+                    </span>
+
+                    <span id="icon-eye-off" hidden>
+                        <Icon name="eye-off" class="icon-eye-off" />
+                    </span>
+                </button>
+            </div>
+        </div>
+        <button type="submit" class="btn-login">{m.login.name}</button>
+    </form>
+    <div class="divider">
+        <span></span>
+        <span>o</span>
+        <span></span>
+    </div>
+    <button class="btn-login-google">
+        <Icon name="google" class="icon"/> 
+        {m.login.google}
+    </button>
+<!--
+    <p class="auth-link">
+        {m.login.text} <a href="/register" class="register">{m.login.register}</a>
+    </p>
+-->
+</div>
+
+<script>
+    import { supabase } from '../../lib/supabase';
+
+    const loginCopy = document.querySelector('#login-copy');
+    const passwordInput = document.querySelector('#password');
+    const emailInput = document.querySelector('#email');
+    const authForm = document.querySelector('.auth-form');
+    const authError = document.querySelector('#auth-error');
+    const authErrorBox = document.querySelector('#auth-error-box');
+    const togglePasswordBtn = document.querySelector('#btn-eye');
+    const googleBtn = document.querySelector('.btn-login-google');
+    const eye = document.getElementById("icon-eye");
+    const eyeOff = document.getElementById("icon-eye-off");
+
+    const getCopy = (key: string, fallback: string): string => {
+        if (!(loginCopy instanceof HTMLElement)) {
+            return fallback;
+        }
+
+        const value = loginCopy.dataset[key];
+        return typeof value === 'string' && value.length > 0 ? value : fallback;
+    };
+
+    const clearAuthError = () => {
+        if (authError) {
+            authError.textContent = '';
+        }
+        if (authErrorBox instanceof HTMLElement) {
+            authErrorBox.hidden = true;
+        }
+    };
+
+    const showAuthError = (message: string) => {
+        if (authError) {
+            authError.textContent = message;
+        }
+        if (authErrorBox instanceof HTMLElement) {
+            authErrorBox.hidden = false;
+        }
+    };
+
+    authForm?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        if (!(emailInput instanceof HTMLInputElement) || !(passwordInput instanceof HTMLInputElement)) {
+            return;
+        }
+
+        clearAuthError();
+
+        const email = emailInput.value.trim();
+        const password = passwordInput.value;
+
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+        });
+
+        if (error) {
+            const normalizedMessage = (error.message ?? '').toLowerCase();
+            const isInvalidCredentials =
+                error.code === 'invalid_credentials' ||
+                error.status === 400 ||
+                normalizedMessage.includes('invalid login credentials');
+
+            const message = isInvalidCredentials
+                ? getCopy('invalidCredentials', 'Credenciales inválidas o cuenta no encontrada.')
+                : getCopy('notLogin', 'No se pudo iniciar sesión. Intenta nuevamente.');
+
+            showAuthError(message);
+            return;
+        }
+
+        if (data.session) {
+            window.location.href = '/';
+        }
+    });
+
+    const togglePasswordVisibility = () => {
+        if (!(passwordInput instanceof HTMLInputElement) || !(togglePasswordBtn instanceof HTMLButtonElement)) return;
+
+        const shouldShowPassword = passwordInput.type === 'password';
+        passwordInput.type = shouldShowPassword ? 'text' : 'password';
+
+        togglePasswordBtn.setAttribute('aria-pressed', String(shouldShowPassword));
+        togglePasswordBtn.setAttribute(
+            'aria-label',
+            shouldShowPassword ? 'Hide password' : 'Show password'
+        );
+
+        if (eye instanceof HTMLElement && eyeOff instanceof HTMLElement) {
+            eye.hidden = shouldShowPassword;
+            eyeOff.hidden = !shouldShowPassword;
+        }
+    };
+
+    togglePasswordBtn?.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+    });
+
+    togglePasswordBtn?.addEventListener('click', togglePasswordVisibility);
+
+    googleBtn?.addEventListener('click', async (e) => {
+        e.preventDefault();
+        
+        // Redirigir a la pantalla de Google
+        const { error } = await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+                // Redirigir a una página intermedia para procesar el token
+                redirectTo: `${window.location.origin}/auth/callback`
+            }
+        });
+
+        if (error) {
+            console.error("Error al iniciar sesión con Google:", error);
+            alert("No se pudo conectar con Google.");
+        }
+    });
+</script>

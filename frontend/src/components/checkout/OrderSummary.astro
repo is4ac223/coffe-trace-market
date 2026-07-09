@@ -1,0 +1,106 @@
+---
+import './OrderSummary.css'
+
+import { 
+    getI18n,
+    resolveLocale,
+    readConsent 
+} from '../../lib/i18n';
+
+const consent = readConsent(Astro.cookies);
+const locale = resolveLocale(Astro.cookies, Astro.url, Astro.request, consent);
+const { m } = getI18n(locale);
+
+interface Props {
+    items: Array<{
+    id: string;
+    name: string;
+    quantity: number;
+    price: number;
+    image?: string;
+    }>;
+    subtotal: number;
+    taxRate?: number; // 0.15
+    discount?: { code: string; amount: number };
+}
+
+const {
+    items = [],
+    subtotal = 0,
+    taxRate = 0.15, //IVA 15%
+    discount = null
+} = Astro.props;
+
+const tax = subtotal * taxRate;
+const discountAmount = discount?.amount || 0;
+const total = subtotal + tax - discountAmount;
+---
+
+<aside class="order-summary" aria-label="Resumen del pedido">
+    <div class="order-summary__card">
+        <header class="order-summary__header">
+            <h2 class="order-summary__title">{m.checkout.orderSummary.title}</h2>
+        </header>
+
+        <ul class="order-summary__items">
+            {items.map((item) => (
+                <li class="order-item">
+                    <div class="order-item__image">
+                        {item.image ? (
+                            <img 
+                                src={item.image} 
+                                alt={item.name} 
+                                class="order-item__img"
+                                loading="lazy"
+                            />
+                            ) : (
+                            <div class="order-item__placeholder">
+                                <span class="material-symbols-outlined">inventory_2</span>
+                            </div>
+                        )}
+                    </div>
+                    <div class="order-item__details">
+                        <p class="order-item__name">{item.name}</p>
+                        <p class="order-item__qty">
+                            {m.checkout.orderSummary.itemQty.replace(
+                                '{qty}',
+                                String(item.quantity)
+                            )}
+                        </p>
+                        <p class="order-item__price">${item.price.toFixed(2)}</p>
+                    </div>
+                </li>
+            ))}
+        </ul>
+
+        <div class="order-summary__breakdown">
+            <dl class="price-row">
+                <dt>{m.checkout.orderSummary.subtotal}</dt>
+                <dd>${subtotal.toFixed(2)}</dd>
+            </dl>
+            <dl class="price-row">
+                {m.checkout.orderSummary.tax.replace(
+                    '{rate}',
+                    String(Math.round(taxRate * 100))
+                )}
+                <dd>${tax.toFixed(2)}</dd>
+            </dl>
+            {discount && (
+                <dl class="price-row price-row--discount">
+                    <dt>
+                        {m.checkout.orderSummary.discount.replace(
+                            '{code}',
+                            discount.code
+                        )}
+                    </dt>
+                    <dd>-${discount.amount.toFixed(2)}</dd>
+                </dl>
+            )}
+            <dl class="price-row price-row--total">
+                <dt>{m.checkout.orderSummary.total}</dt>
+                <dd>${total.toFixed(2)}</dd>
+            </dl>
+        </div>
+
+    </div>
+</aside>
